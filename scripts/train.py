@@ -1,6 +1,7 @@
 import dataclasses
 import functools
 import logging
+import os
 import platform
 from typing import Any
 
@@ -200,7 +201,12 @@ def main(config: _config.TrainConfig):
             f"Batch size {config.batch_size} must be divisible by the number of devices {jax.device_count()}."
         )
 
-    jax.config.update("jax_compilation_cache_dir", str(epath.Path("~/.cache/jax").expanduser()))
+    if jax.config.jax_enable_compilation_cache:
+        compilation_cache_dir = epath.Path(os.environ.get("JAX_COMPILATION_CACHE_DIR", "~/.cache/jax")).expanduser()
+        jax.config.update("jax_compilation_cache_dir", str(compilation_cache_dir))
+        logging.info(f"Using JAX compilation cache: {compilation_cache_dir}")
+    else:
+        logging.info("JAX compilation cache is disabled")
 
     rng = jax.random.key(config.seed)
     train_rng, init_rng = jax.random.split(rng)
@@ -267,6 +273,8 @@ def main(config: _config.TrainConfig):
             pbar.write(f"Step {step}: {info_str}")
             wandb.log(reduced_info, step=step)
             infos = []
+            if not all(np.all(np.isfinite(value)) for value in reduced_info.values()):
+                raise FloatingPointError(f"Non-finite training metric at step {step}: {info_str}")
         batch = next(data_iter)
 
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
