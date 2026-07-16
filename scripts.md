@@ -32,6 +32,8 @@
 
 ## 上传模型
 
+上传脚本只会上传 server 推理所需的 `params/` 和 `assets/`，不会上传 `train_state/`、W&B 信息或 checkpoint 管理元数据。
+
 ```bash
 python scripts/upload_checkpoint_to_hf.py \
   checkpoints/pi0_put_mango \
