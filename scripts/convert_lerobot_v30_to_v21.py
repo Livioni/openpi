@@ -68,6 +68,26 @@ def _legacy_episode_stats(row: dict[str, Any], feature_names: list[str]) -> dict
     return stats
 
 
+def _legacy_features(features: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Convert v3 feature metadata to the channel-first v2.1 convention."""
+    legacy_features = copy.deepcopy(features)
+    for feature in legacy_features.values():
+        # v2.1 stores the dataset FPS once at the top level.
+        feature.pop("fps", None)
+
+        if feature["dtype"] not in {"image", "video"}:
+            continue
+
+        names = feature.get("names")
+        shape = feature.get("shape")
+        if names == ["height", "width", "channels"] and len(shape) == 3:
+            height, width, channels = shape
+            feature["shape"] = [channels, height, width]
+            feature["names"] = ["channels", "height", "width"]
+
+    return legacy_features
+
+
 def _source_data_path(source: pathlib.Path, info: dict[str, Any], row: dict[str, Any]) -> pathlib.Path:
     relative = info["data_path"].format(
         chunk_index=row["data/chunk_index"],
@@ -309,6 +329,7 @@ def convert(source: pathlib.Path, output: pathlib.Path, *, workers: int, verify:
     legacy_info.update(
         {
             "codebase_version": "v2.1",
+            "features": _legacy_features(source_info["features"]),
             "total_tasks": len(tasks),
             "total_videos": len(episode_rows) * len(video_keys),
             "total_chunks": math.ceil(len(episode_rows) / source_info["chunks_size"]),

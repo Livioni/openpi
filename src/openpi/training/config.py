@@ -707,6 +707,40 @@ _CONFIGS = [
         batch_size=32,
         keep_period=None,
     ),
+    TrainConfig(
+        name="pi0_table_clean",
+        model=pi0_config.Pi0Config(),
+        data=LeRobotPiperDataConfig(
+            repo_id="table_clean_v21",
+            default_prompt="pick up the crumpled paper and small blocks from the tabletop, place them into the tray, then use the cloth to wipe the brown stain on the table.",
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=60_000,
+        batch_size=32,
+        keep_period=None,
+    ),
+    TrainConfig(
+        name="pi0_table_clean_lora",
+        model=pi0_config.Pi0Config(
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+        ),
+        data=LeRobotPiperDataConfig(
+            repo_id="table_clean_v21",
+            default_prompt="pick up the crumpled paper and small blocks from the tabletop, place them into the tray, then use the cloth to wipe the brown stain on the table.",
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=60_000,
+        batch_size=32,
+        keep_period=None,
+        freeze_filter=pi0_config.Pi0Config(
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+        ).get_freeze_filter(),
+        ema_decay=None,
+    ),
     #
     # Fine-tuning Libero configs.
     #
